@@ -12,15 +12,27 @@ def set_click_through(hwnd, enabled=True):
         WS_EX_TRANSPARENT = 0x00000020
         WS_EX_LAYERED = 0x00080000
         
+        SWP_NOSIZE = 0x0001
+        SWP_NOMOVE = 0x0002
+        SWP_NOZORDER = 0x0004
+        SWP_NOACTIVATE = 0x0010
+        SWP_FRAMECHANGED = 0x0020
+        
         GetWindowLong = ctypes.windll.user32.GetWindowLongW
         SetWindowLong = ctypes.windll.user32.SetWindowLongW
+        SetWindowPos = ctypes.windll.user32.SetWindowPos
         
         style = GetWindowLong(hwnd, GWL_EXSTYLE)
         if enabled:
             style |= (WS_EX_TRANSPARENT | WS_EX_LAYERED)
         else:
-            style &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED)
+            style &= ~WS_EX_TRANSPARENT  # Do NOT disable WS_EX_LAYERED to preserve transparency
+            
         SetWindowLong(hwnd, GWL_EXSTYLE, style)
+        
+        # Force the OS to update the window frame and styles immediately
+        SetWindowPos(hwnd, None, 0, 0, 0, 0, 
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED)
         return True
     except Exception as e:
         print(f"Error setting click through: {e}")
@@ -106,18 +118,37 @@ class NovaAmbientAPI:
             hwnd = ctypes.windll.user32.FindWindowW(None, 'NovaAmbient Studio — Ambient Sound & Focus Station')
             
             if self._is_overlay:
+                # Save previous state
+                self._prev_width = self._window.width
+                self._prev_height = self._window.height
+                self._prev_x = self._window.x
+                self._prev_y = self._window.y
+                self._prev_was_maximized = self._is_maximized
+                
                 # Enter overlay mode
                 self._window.on_top = True
-                if not self._is_maximized:
-                    self._window.maximize()
+                
+                # Resize manually instead of maximizing (prevents Windows transparency key red-screen bug)
+                width = ctypes.windll.user32.GetSystemMetrics(0)
+                height = ctypes.windll.user32.GetSystemMetrics(1)
+                self._window.resize(width, height)
+                self._window.move(0, 0)
+                
                 set_click_through(hwnd, True)
                 self._window.evaluate_js("setOverlayMode(true)")
             else:
                 # Exit overlay mode
                 set_click_through(hwnd, False)
                 self._window.on_top = False
-                if self._is_maximized:
-                    self._window.restore()
+                
+                # Restore previous size and position
+                self._window.resize(self._prev_width, self._prev_height)
+                self._window.move(self._prev_x, self._prev_y)
+                
+                # If it was maximized before, restore the maximized state
+                if self._prev_was_maximized:
+                    self._window.maximize()
+                    
                 self._window.evaluate_js("setOverlayMode(false)")
                 
             return {"status": "success", "is_overlay": self._is_overlay}
