@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup Canvas Visualizer
     startVisualizer();
     
+    // Start Ambient Screen Effects
+    startAmbientEffects();
+    
     // Trigger Lucide Icon setup
     lucide.createIcons();
     
@@ -88,6 +91,7 @@ function bindChannelEvents(channelId) {
         }
         
         audio.setChannelVolume(channelId, val);
+        ambientVolumes[channelId] = val;
     });
     
     // Mute click
@@ -266,8 +270,23 @@ function bindControls() {
             
             audio.channelGains[ch.id] = 0.0;
             audio.channelMutes[ch.id] = false;
+            ambientVolumes[ch.id] = 0;
         });
         toasts.warn("Mixer Reset", "All sound channels cleared.");
+    });
+    
+    // Screen Effects Toggle binding
+    const effectsToggle = document.getElementById('btn-effects-toggle');
+    effectsToggle.addEventListener('click', () => {
+        ambientEffectsEnabled = !ambientEffectsEnabled;
+        effectsToggle.classList.toggle('active', ambientEffectsEnabled);
+        effectsToggle.textContent = ambientEffectsEnabled ? 'ON' : 'OFF';
+        
+        if (ambientEffectsEnabled) {
+            updateStatus("Screen effects overlay enabled.");
+        } else {
+            updateStatus("Screen effects overlay disabled.");
+        }
     });
 }
 
@@ -294,6 +313,7 @@ function applyPresetMix(mix) {
         audio.channelMutes[ch.id] = false;
         
         audio.setChannelVolume(ch.id, val);
+        ambientVolumes[ch.id] = val;
         if (val > 0) anyActive = true;
     });
     
@@ -561,6 +581,10 @@ audio.onThunderFlashCallback = () => {
         body.style.filter = '';
     }, 150);
     
+    if (ambientEffectsEnabled) {
+        triggerCanvasLightning();
+    }
+    
     toasts.info("Lightning strike", "Procedural thunder rumble triggered.");
 };
 
@@ -602,4 +626,220 @@ const toasts = {
 
 function updateStatus(msg) {
     document.getElementById('status-message').textContent = msg;
+}
+
+// 6. AMBIENT BACKGROUND EFFECTS ENGINE
+let ambientEffectsEnabled = true;
+const ambientVolumes = { rain: 0, wind: 0, campfire: 0, thunder: 0, cosmos: 0 };
+let lightningFlash = 0; // Current lightning alpha
+
+function startAmbientEffects() {
+    const canvas = document.getElementById('ambient-effects-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Sync Initial Volumes from DOM Sliders
+    channels.forEach(ch => {
+        const slider = document.getElementById(`slider-${ch.id}`);
+        if (slider) {
+            ambientVolumes[ch.id] = parseInt(slider.value) || 0;
+        }
+    });
+
+    // Particle Arrays
+    const rainParticles = [];
+    const windParticles = [];
+    const fireEmbers = [];
+    
+    // Particle Spawners
+    function createRain() {
+        return {
+            x: Math.random() * canvas.width,
+            y: Math.random() * -50,
+            vy: 12 + Math.random() * 12,
+            vx: -1.0 - Math.random() * 1.5,
+            len: 15 + Math.random() * 20,
+            width: 0.8 + Math.random() * 0.8,
+            alpha: 0.15 + Math.random() * 0.3
+        };
+    }
+    
+    function createWind() {
+        return {
+            x: -200 - Math.random() * 200,
+            y: Math.random() * canvas.height,
+            vx: 3 + Math.random() * 5,
+            vy: -0.5 + Math.random() * 1.0,
+            len: 100 + Math.random() * 100,
+            width: 0.5 + Math.random() * 0.8,
+            alpha: 0.05 + Math.random() * 0.12,
+            yOffset: Math.random() * 100
+        };
+    }
+    
+    function createEmber() {
+        return {
+            x: Math.random() * canvas.width,
+            y: canvas.height + 10 + Math.random() * 30,
+            vx: -0.8 + Math.random() * 1.6,
+            vy: 2.0 + Math.random() * 2.5,
+            r: 1.5 + Math.random() * 2.0,
+            alpha: 0.4 + Math.random() * 0.6,
+            decay: 0.003 + Math.random() * 0.006,
+            colorHue: 10 + Math.floor(Math.random() * 20) // Deep red-orange to orange
+        };
+    }
+
+    // Animation loop
+    function loop() {
+        if (!ambientEffectsEnabled) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(loop);
+            return;
+        }
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const w = canvas.width;
+        const h = canvas.height;
+        
+        // 1. Draw Nebula Cosmos Glow
+        const cosmosPct = ambientVolumes.cosmos / 100;
+        if (cosmosPct > 0) {
+            const grad = ctx.createRadialGradient(w * 0.7, h * 0.3, 10, w * 0.7, h * 0.3, Math.max(w, h) * 0.8 * cosmosPct);
+            grad.addColorStop(0, `rgba(186, 104, 200, ${0.08 * cosmosPct})`);
+            grad.addColorStop(0.5, `rgba(103, 58, 183, ${0.04 * cosmosPct})`);
+            grad.addColorStop(1, 'rgba(4, 4, 6, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+        }
+        
+        // 2. Draw Lightning Flash
+        if (lightningFlash > 0) {
+            ctx.fillStyle = `rgba(224, 247, 250, ${lightningFlash})`;
+            ctx.fillRect(0, 0, w, h);
+            lightningFlash *= 0.88;
+            if (lightningFlash < 0.01) lightningFlash = 0;
+        }
+        
+        // 3. Render Rain Particles
+        const maxRain = Math.floor((ambientVolumes.rain / 100) * 150);
+        while (rainParticles.length < maxRain) {
+            rainParticles.push(createRain());
+        }
+        if (rainParticles.length > maxRain) {
+            rainParticles.splice(maxRain);
+        }
+        
+        ctx.lineCap = 'round';
+        rainParticles.forEach(p => {
+            ctx.lineWidth = p.width;
+            ctx.strokeStyle = `rgba(156, 220, 254, ${p.alpha})`;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + p.vx, p.y + p.len);
+            ctx.stroke();
+            
+            p.x += p.vx;
+            p.y += p.vy;
+            
+            if (p.y > h) {
+                p.y = -p.len;
+                p.x = Math.random() * w;
+            }
+        });
+        
+        // 4. Render Wind Particles
+        const maxWind = Math.floor((ambientVolumes.wind / 100) * 35);
+        while (windParticles.length < maxWind) {
+            windParticles.push(createWind());
+        }
+        if (windParticles.length > maxWind) {
+            windParticles.splice(maxWind);
+        }
+        
+        windParticles.forEach(p => {
+            ctx.strokeStyle = `rgba(224, 242, 241, ${p.alpha})`;
+            ctx.lineWidth = p.width;
+            
+            ctx.beginPath();
+            const steps = 4;
+            const stepWidth = p.len / steps;
+            ctx.moveTo(p.x, p.y);
+            for (let i = 1; i <= steps; i++) {
+                const cx = p.x + i * stepWidth;
+                const cy = p.y + Math.sin((cx + p.yOffset) / 40) * 8 + p.vy * i;
+                ctx.lineTo(cx, cy);
+            }
+            ctx.stroke();
+            
+            p.x += p.vx;
+            p.y += p.vy;
+            
+            if (p.x > w) {
+                p.x = -p.len - 50;
+                p.y = Math.random() * h;
+            }
+        });
+        
+        // 5. Render Campfire Embers
+        const maxEmbers = Math.floor((ambientVolumes.campfire / 100) * 100);
+        while (fireEmbers.length < maxEmbers) {
+            fireEmbers.push(createEmber());
+        }
+        if (fireEmbers.length > maxEmbers) {
+            fireEmbers.splice(maxEmbers);
+        }
+        
+        ctx.shadowBlur = 4;
+        fireEmbers.forEach((p, idx) => {
+            ctx.shadowColor = `hsl(${p.colorHue}, 100%, 55%)`;
+            ctx.fillStyle = `hsla(${p.colorHue}, 100%, 60%, ${p.alpha})`;
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            
+            p.y -= p.vy;
+            p.x += p.vx + Math.sin(p.y / 30) * 0.5;
+            p.alpha -= p.decay;
+            
+            if (p.alpha <= 0 || p.y < -10) {
+                fireEmbers[idx] = createEmber();
+            }
+        });
+        ctx.shadowBlur = 0;
+        
+        requestAnimationFrame(loop);
+    }
+    
+    // Random lightning strike scheduler (if thunder playing)
+    function startLightningTrigger() {
+        const check = () => {
+            const thunderPct = ambientVolumes.thunder / 100;
+            if (ambientEffectsEnabled && thunderPct > 0) {
+                if (Math.random() < 0.05 * thunderPct) {
+                    triggerCanvasLightning();
+                }
+            }
+            setTimeout(check, 3000 + Math.random() * 3000);
+        };
+        check();
+    }
+    
+    startLightningTrigger();
+    loop();
+}
+
+function triggerCanvasLightning() {
+    const thunderPct = ambientVolumes.thunder / 100;
+    lightningFlash = 0.2 + Math.random() * 0.35 * thunderPct;
 }

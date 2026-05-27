@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-ambient">
+    <!-- Ambient Screen Effects Canvas -->
+    <canvas id="ambient-effects-canvas" class="ambient-effects-canvas"></canvas>
+
     <div class="app-container">
         <!-- 1. CUSTOM TOP TITLE BAR (Frameless Window) -->
         <header class="app-titlebar" id="titlebar-drag">
@@ -19,7 +22,7 @@
                     <i data-lucide="sparkles"></i>
                 </div>
                 <span class="brand-text">NovaAmbient <span class="accent-glow">Studio</span></span>
-                <span class="version-tag">v1.1.0</span>
+                <span class="version-tag">v1.1.1</span>
             </div>
             
             <div class="status-center-quick" id="quick-timer-display">
@@ -123,6 +126,14 @@
                         </div>
                         
                         <div class="divider"></div>
+
+                        <!-- Settings Panel -->
+                        <div class="settings-row">
+                            <span class="settings-label"><i data-lucide="sparkles"></i> Screen Effects</span>
+                            <button class="settings-toggle-btn active" id="btn-effects-toggle" title="Toggle Screen Effects">ON</button>
+                        </div>
+                        
+                        <div class="divider"></div>
                         
                         <!-- File Operations -->
                         <div class="file-operations-row">
@@ -150,7 +161,7 @@
 
             <div class="status-right">
                 <div class="status-item">Engine: Web Audio API</div>
-                <div class="status-item brand-tag">NovaAmbient v1.1.0</div>
+                <div class="status-item brand-tag">NovaAmbient v1.1.1</div>
             </div>
         </footer>
     </div>
