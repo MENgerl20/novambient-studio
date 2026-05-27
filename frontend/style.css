@@ -992,8 +992,8 @@ body {
 
 /* Desktop Overlay Mode active state */
 body.overlay-active {
-    background-color: transparent !important;
-    background: transparent !important;
+    background-color: #ff00ff !important;
+    background: #ff00ff !important;
 }
 
 body.overlay-active .app-container {

@@ -6,7 +6,7 @@ import ctypes
 from ctypes import wintypes
 import threading
 
-def set_click_through(hwnd, enabled=True):
+def set_overlay_styles(hwnd, enabled=True):
     try:
         GWL_EXSTYLE = -20
         WS_EX_TRANSPARENT = 0x00000020
@@ -21,21 +21,26 @@ def set_click_through(hwnd, enabled=True):
         GetWindowLong = ctypes.windll.user32.GetWindowLongW
         SetWindowLong = ctypes.windll.user32.SetWindowLongW
         SetWindowPos = ctypes.windll.user32.SetWindowPos
+        SetLayeredWindowAttributes = ctypes.windll.user32.SetLayeredWindowAttributes
         
         style = GetWindowLong(hwnd, GWL_EXSTYLE)
         if enabled:
+            # Add click-through and layered window styles
             style |= (WS_EX_TRANSPARENT | WS_EX_LAYERED)
+            SetWindowLong(hwnd, GWL_EXSTYLE, style)
+            # Set transparency chroma key to Magenta (0x00FF00FF)
+            SetLayeredWindowAttributes(hwnd, 0x00FF00FF, 0, 1)  # LWA_COLORKEY = 1
         else:
-            style &= ~WS_EX_TRANSPARENT  # Do NOT disable WS_EX_LAYERED to preserve transparency
+            # Completely strip click-through and layered styles
+            style &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED)
+            SetWindowLong(hwnd, GWL_EXSTYLE, style)
             
-        SetWindowLong(hwnd, GWL_EXSTYLE, style)
-        
-        # Force the OS to update the window frame and styles immediately
+        # Force frame recalculation and style apply
         SetWindowPos(hwnd, None, 0, 0, 0, 0, 
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED)
         return True
     except Exception as e:
-        print(f"Error setting click through: {e}")
+        print(f"Error setting overlay styles: {e}")
         return False
 
 class HotkeyListener(threading.Thread):
@@ -134,11 +139,11 @@ class NovaAmbientAPI:
                 self._window.resize(width, height)
                 self._window.move(0, 0)
                 
-                set_click_through(hwnd, True)
+                set_overlay_styles(hwnd, True)
                 self._window.evaluate_js("setOverlayMode(true)")
             else:
                 # Exit overlay mode
-                set_click_through(hwnd, False)
+                set_overlay_styles(hwnd, False)
                 self._window.on_top = False
                 
                 # Restore previous size and position
@@ -239,8 +244,7 @@ def main():
         min_size=(900, 600),
         background_color='#0b0b0e',
         frameless=True,
-        easy_drag=True,
-        transparent=True
+        easy_drag=True
     )
     
     api.set_window(window)
