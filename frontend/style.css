@@ -992,10 +992,24 @@ body {
 
 /* Desktop Overlay Mode active state */
 body.overlay-active {
-    background-color: #ff00ff !important;
-    background: #ff00ff !important;
+    background-color: #040406 !important;
+    background: #040406 !important;
 }
 
 body.overlay-active .app-container {
     display: none !important;
+}
+
+/* Beta tag style */
+.beta-tag {
+    font-size: 8px;
+    font-weight: 700;
+    color: #ff3366;
+    background: rgba(255, 51, 102, 0.12);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    margin-left: 6px;
+    vertical-align: middle;
+    text-shadow: 0 0 4px rgba(255, 51, 102, 0.3);
 }

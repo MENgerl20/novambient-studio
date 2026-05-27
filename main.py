@@ -28,8 +28,8 @@ def set_overlay_styles(hwnd, enabled=True):
             # Add click-through and layered window styles
             style |= (WS_EX_TRANSPARENT | WS_EX_LAYERED)
             SetWindowLong(hwnd, GWL_EXSTYLE, style)
-            # Set transparency chroma key to Magenta (0x00FF00FF)
-            SetLayeredWindowAttributes(hwnd, 0x00FF00FF, 0, 1)  # LWA_COLORKEY = 1
+            # Set transparency chroma key to Dark Charcoal (0x00060404)
+            SetLayeredWindowAttributes(hwnd, 0x00060404, 0, 1)  # LWA_COLORKEY = 1
         else:
             # Completely strip click-through and layered styles
             style &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED)
