@@ -316,7 +316,7 @@ function toggleTimer() {
         isTimerRunning = false;
         clearInterval(timerInterval);
         timerInterval = null;
-        btn.querySelector('i').setAttribute('data-lucide', 'play');
+        btn.innerHTML = '<i data-lucide="play"></i>';
         btn.classList.remove('playing');
         lucide.createIcons();
         updateStatus("Focus timer paused.");
@@ -329,7 +329,7 @@ function toggleTimer() {
     } else {
         // Start timer
         isTimerRunning = true;
-        btn.querySelector('i').setAttribute('data-lucide', 'pause');
+        btn.innerHTML = '<i data-lucide="pause"></i>';
         btn.classList.add('playing');
         lucide.createIcons();
         updateStatus(`Focus timer running (${timerMode.toUpperCase()})`);
@@ -364,7 +364,7 @@ function resetTimer() {
     timeLeft = timerDuration;
     
     const btn = document.getElementById('btn-timer-toggle');
-    btn.querySelector('i').setAttribute('data-lucide', 'play');
+    btn.innerHTML = '<i data-lucide="play"></i>';
     btn.classList.remove('playing');
     lucide.createIcons();
     
@@ -411,7 +411,7 @@ function timerFinished() {
     audio.playFocusBell();
     
     const btn = document.getElementById('btn-timer-toggle');
-    btn.querySelector('i').setAttribute('data-lucide', 'play');
+    btn.innerHTML = '<i data-lucide="play"></i>';
     btn.classList.remove('playing');
     lucide.createIcons();
     
