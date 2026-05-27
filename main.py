@@ -2,14 +2,80 @@ import os
 import sys
 import json
 import webview
+import ctypes
+from ctypes import wintypes
+import threading
+
+def set_click_through(hwnd, enabled=True):
+    try:
+        GWL_EXSTYLE = -20
+        WS_EX_TRANSPARENT = 0x00000020
+        WS_EX_LAYERED = 0x00080000
+        
+        GetWindowLong = ctypes.windll.user32.GetWindowLongW
+        SetWindowLong = ctypes.windll.user32.SetWindowLongW
+        
+        style = GetWindowLong(hwnd, GWL_EXSTYLE)
+        if enabled:
+            style |= (WS_EX_TRANSPARENT | WS_EX_LAYERED)
+        else:
+            style &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED)
+        SetWindowLong(hwnd, GWL_EXSTYLE, style)
+        return True
+    except Exception as e:
+        print(f"Error setting click through: {e}")
+        return False
+
+class HotkeyListener(threading.Thread):
+    def __init__(self, api):
+        super().__init__()
+        self.api = api
+        self.daemon = True
+        self.running = True
+        
+    def run(self):
+        MOD_ALT = 0x0001
+        MOD_SHIFT = 0x0004
+        VK_O = 0x4F # O key
+        HOTKEY_ID = 99
+        
+        res = ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID, MOD_ALT | MOD_SHIFT, VK_O)
+        if not res:
+            print("Failed to register Alt+Shift+O")
+            return
+            
+        msg = wintypes.MSG()
+        while self.running:
+            if ctypes.windll.user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
+                if msg.message == 0x0312: # WM_HOTKEY
+                    if msg.wParam == HOTKEY_ID:
+                        self.api.trigger_overlay_from_hotkey()
+                ctypes.windll.user32.TranslateMessage(ctypes.byref(msg))
+                ctypes.windll.user32.DispatchMessageW(ctypes.byref(msg))
+                
+        ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID)
 
 class NovaAmbientAPI:
     def __init__(self):
         self._window = None
         self._is_maximized = False
+        self._is_overlay = False
+        self._hotkey_listener = None
 
     def set_window(self, window):
         self._window = window
+        self._window.events.maximized += self._on_maximized
+        self._window.events.restored += self._on_restored
+        
+        # Start hotkey listener
+        self._hotkey_listener = HotkeyListener(self)
+        self._hotkey_listener.start()
+
+    def _on_maximized(self):
+        self._is_maximized = True
+
+    def _on_restored(self):
+        self._is_maximized = False
 
     def minimize(self):
         if self._window:
@@ -19,10 +85,8 @@ class NovaAmbientAPI:
         if self._window:
             if self._is_maximized:
                 self._window.restore()
-                self._is_maximized = False
             else:
                 self._window.maximize()
-                self._is_maximized = True
 
     def toggle_fullscreen(self):
         if self._window:
@@ -31,6 +95,37 @@ class NovaAmbientAPI:
     def destroy(self):
         if self._window:
             self._window.destroy()
+
+    def toggle_overlay(self):
+        try:
+            if not self._window:
+                return {"error": "Window not initialized"}
+                
+            self._is_overlay = not self._is_overlay
+            
+            hwnd = ctypes.windll.user32.FindWindowW(None, 'NovaAmbient Studio — Ambient Sound & Focus Station')
+            
+            if self._is_overlay:
+                # Enter overlay mode
+                self._window.on_top = True
+                if not self._is_maximized:
+                    self._window.maximize()
+                set_click_through(hwnd, True)
+                self._window.evaluate_js("setOverlayMode(true)")
+            else:
+                # Exit overlay mode
+                set_click_through(hwnd, False)
+                self._window.on_top = False
+                if self._is_maximized:
+                    self._window.restore()
+                self._window.evaluate_js("setOverlayMode(false)")
+                
+            return {"status": "success", "is_overlay": self._is_overlay}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def trigger_overlay_from_hotkey(self):
+        self.toggle_overlay()
 
     def save_preset(self, preset_json):
         try:
@@ -47,8 +142,11 @@ class NovaAmbientAPI:
             if not save_path:
                 return {"status": "cancelled"}
                 
-            if isinstance(save_path, list):
-                save_path = save_path[0]
+            if isinstance(save_path, (list, tuple)):
+                if len(save_path) > 0:
+                    save_path = save_path[0]
+                else:
+                    return {"status": "cancelled"}
                 
             with open(save_path, 'w', encoding='utf-8') as f:
                 f.write(preset_json)
@@ -71,8 +169,11 @@ class NovaAmbientAPI:
             if not load_path:
                 return {"status": "cancelled"}
                 
-            if isinstance(load_path, list):
-                load_path = load_path[0]
+            if isinstance(load_path, (list, tuple)):
+                if len(load_path) > 0:
+                    load_path = load_path[0]
+                else:
+                    return {"status": "cancelled"}
                 
             with open(load_path, 'r', encoding='utf-8') as f:
                 data = f.read()
@@ -107,7 +208,8 @@ def main():
         min_size=(900, 600),
         background_color='#0b0b0e',
         frameless=True,
-        easy_drag=True
+        easy_drag=True,
+        transparent=True
     )
     
     api.set_window(window)

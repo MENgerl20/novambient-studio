@@ -989,3 +989,13 @@ body {
     color: #00e5ff !important;
     box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
 }
+
+/* Desktop Overlay Mode active state */
+body.overlay-active {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+body.overlay-active .app-container {
+    display: none !important;
+}

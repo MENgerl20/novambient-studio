@@ -3,6 +3,7 @@ import { AtmosphereEngine } from './audio.js';
 
 // Instantiate core DSP Engine
 const audio = new AtmosphereEngine();
+window.audio = audio;
 
 // Channels database definition
 const channels = [
@@ -288,6 +289,22 @@ function bindControls() {
             updateStatus("Screen effects overlay disabled.");
         }
     });
+
+    // Desktop Mode Toggle binding
+    const desktopToggle = document.getElementById('btn-desktop-overlay');
+    if (desktopToggle) {
+        desktopToggle.addEventListener('click', async () => {
+            if (typeof pywebview === 'undefined' || !pywebview.api) {
+                toasts.error("Mode Error", "Desktop API backend not loaded.");
+                return;
+            }
+            
+            const res = await pywebview.api.toggle_overlay();
+            if (res && res.error) {
+                toasts.error("Mode Failed", res.error);
+            }
+        });
+    }
 }
 
 function applyPresetMix(mix) {
@@ -631,6 +648,8 @@ function updateStatus(msg) {
 // 6. AMBIENT BACKGROUND EFFECTS ENGINE
 let ambientEffectsEnabled = true;
 const ambientVolumes = { rain: 0, wind: 0, campfire: 0, thunder: 0, cosmos: 0 };
+window.ambientVolumes = ambientVolumes;
+window.ambientEffectsEnabled = ambientEffectsEnabled;
 let lightningFlash = 0; // Current lightning alpha
 
 function startAmbientEffects() {
@@ -843,3 +862,27 @@ function triggerCanvasLightning() {
     const thunderPct = ambientVolumes.thunder / 100;
     lightningFlash = 0.2 + Math.random() * 0.35 * thunderPct;
 }
+
+// 7. DESKTOP OVERLAY CONTROLLER
+window.setOverlayMode = function(enabled) {
+    const body = document.body;
+    const desktopToggle = document.getElementById('btn-desktop-overlay');
+    
+    if (enabled) {
+        body.classList.add('overlay-active');
+        if (desktopToggle) {
+            desktopToggle.classList.add('active');
+            desktopToggle.textContent = 'ON';
+        }
+        toasts.success("Desktop Mode Active", "Press Alt+Shift+O to exit overlay mode.");
+        updateStatus("Desktop overlay mode active. Alt+Shift+O to return.");
+    } else {
+        body.classList.remove('overlay-active');
+        if (desktopToggle) {
+            desktopToggle.classList.remove('active');
+            desktopToggle.textContent = 'OFF';
+        }
+        toasts.info("Returned to Normal Mode", "App controls restored.");
+        updateStatus("Returned to normal workspace.");
+    }
+};
