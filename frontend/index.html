@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaAmbient Studio</title>
+    <!-- Google Fonts for elite studio typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-ambient">
+    <div class="app-container">
+        <!-- 1. CUSTOM TOP TITLE BAR (Frameless Window) -->
+        <header class="app-titlebar" id="titlebar-drag">
+            <div class="brand-section">
+                <div class="logo-icon-glow">
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <span class="brand-text">NovaAmbient <span class="accent-glow">Studio</span></span>
+                <span class="version-tag">v1.1.0</span>
+            </div>
+            
+            <div class="status-center-quick" id="quick-timer-display">
+                Focus Session: 25:00
+            </div>
+
+            <div class="window-controls">
+                <button class="win-btn" onclick="pywebview.api.minimize()" title="Minimize"><i data-lucide="minus"></i></button>
+                <button class="win-btn" onclick="pywebview.api.toggle_maximize()" title="Maximize / Restore"><i data-lucide="square"></i></button>
+                <button class="win-btn" onclick="pywebview.api.toggle_fullscreen()" title="Toggle Fullscreen"><i data-lucide="maximize-2"></i></button>
+                <button class="win-btn win-close" onclick="pywebview.api.destroy()" title="Close"><i data-lucide="x"></i></button>
+            </div>
+        </header>
+
+        <!-- 2. MAIN WORKSPACE CONTAINER -->
+        <main class="studio-workspace">
+            <!-- LEFT PANEL: Sound Mixer -->
+            <section class="workspace-section mixer-panel">
+                <div class="section-header">
+                    <h2>Atmosphere Mixer <span class="subtitle">Procedural Synthesis</span></h2>
+                </div>
+                
+                <div class="mixer-channels" id="mixer-channels-list">
+                    <!-- Channels generated dynamically via app.js -->
+                </div>
+                
+                <div class="master-fader-row">
+                    <div class="channel-label">
+                        <i data-lucide="volume-2" class="master-icon"></i>
+                        <span>MASTER</span>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="slider-master-vol" min="0" max="100" value="80" class="deck-slider">
+                    </div>
+                    <span class="value-badge" id="label-master-vol">80%</span>
+                </div>
+            </section>
+
+            <!-- CENTER PANEL: Pomodoro Focus Timer -->
+            <section class="workspace-section timer-panel">
+                <div class="section-header justify-center">
+                    <h2>Focus Station</h2>
+                </div>
+                
+                <div class="timer-display-wrapper">
+                    <!-- Circular SVG Timer -->
+                    <div class="circular-timer-container">
+                        <svg class="timer-svg" viewBox="0 0 200 200">
+                            <!-- Background Track -->
+                            <circle class="timer-circle-bg" cx="100" cy="100" r="85"></circle>
+                            <!-- Progress Ring -->
+                            <circle class="timer-circle-progress" id="timer-progress-ring" cx="100" cy="100" r="85"></circle>
+                        </svg>
+                        
+                        <!-- Text overlay inside circle -->
+                        <div class="timer-text-content">
+                            <span class="timer-state-label" id="timer-state-title">FOCUS</span>
+                            <span class="timer-countdown" id="timer-clock-text">25:00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="timer-controls-deck">
+                    <button class="timer-btn-primary" id="btn-timer-toggle" title="Play/Pause"><i data-lucide="play"></i></button>
+                    <button class="timer-btn-secondary" id="btn-timer-reset" title="Reset"><i data-lucide="rotate-ccw"></i></button>
+                </div>
+
+                <div class="timer-mode-selectors">
+                    <button class="mode-btn active" id="mode-focus" data-minutes="25">Focus</button>
+                    <button class="mode-btn" id="mode-short" data-minutes="5">Short Break</button>
+                    <button class="mode-btn" id="mode-long" data-minutes="15">Long Break</button>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: Presets & Visualizer -->
+            <aside class="workspace-section console-panel">
+                <!-- Visualizer Block -->
+                <div class="console-box visualizer-box">
+                    <div class="section-header">
+                        <h2>Ambient Waveform</h2>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="visualizer-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Custom Presets Block -->
+                <div class="console-box presets-box">
+                    <div class="section-header">
+                        <h2>Factory & Custom Mixes</h2>
+                    </div>
+                    <div class="presets-body">
+                        <!-- Quick Presets -->
+                        <div class="preset-row">
+                            <button class="preset-pill" id="preset-rainy-woods"><i data-lucide="cloud-rain"></i> Rainy Woods</button>
+                            <button class="preset-pill" id="preset-cozy-hearth"><i data-lucide="flame"></i> Cozy Hearth</button>
+                        </div>
+                        <div class="preset-row">
+                            <button class="preset-pill" id="preset-cyber-storm"><i data-lucide="zap"></i> Cyber Storm</button>
+                            <button class="preset-pill" id="preset-deep-space"><i data-lucide="orbit"></i> Deep Space</button>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <!-- File Operations -->
+                        <div class="file-operations-row">
+                            <button class="file-btn" id="btn-load-mix"><i data-lucide="folder-open"></i> Open Mix</button>
+                            <button class="file-btn" id="btn-save-mix"><i data-lucide="save"></i> Save Mix</button>
+                            <button class="file-btn btn-danger-glow" id="btn-clear-mix"><i data-lucide="trash-2"></i> Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- 3. BOTTOM STATUS BAR -->
+        <footer class="studio-status-bar">
+            <div class="status-left">
+                <div class="status-item status-indicator">
+                    <span class="led-indicator" id="status-led"></span>
+                    <span id="status-message">Synthesis engine offline. Press Play on any slider.</span>
+                </div>
+            </div>
+            
+            <div class="status-center">
+                NovaAmbient Studio • Pure Procedural Audio DSP
+            </div>
+
+            <div class="status-right">
+                <div class="status-item">Engine: Web Audio API</div>
+                <div class="status-item brand-tag">NovaAmbient v1.1.0</div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Dialog Overlay -->
+    <div class="dialog-overlay hidden" id="dialog-overlay-wrapper">
+        <div class="dialog-box">
+            <div class="dialog-header">
+                <h3 id="dialog-title-text">Confirm Action</h3>
+                <button class="dialog-close-btn" id="btn-dialog-close" title="Close"><i data-lucide="x"></i></button>
+            </div>
+            <div class="dialog-body">
+                <p id="dialog-body-desc">Are you sure you want to proceed?</p>
+                <input type="text" class="dialog-input hidden" id="dialog-text-input" placeholder="Type here...">
+            </div>
+            <div class="dialog-footer">
+                <button class="btn btn-secondary" id="btn-dialog-cancel">Cancel</button>
+                <button class="btn btn-primary" id="btn-dialog-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- SCRIPT CONNECTIONS -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
